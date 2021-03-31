@@ -1,0 +1,18 @@
+
+server:
+  port: 3086
+spring:
+  jpa:
+    open-in-view: false
+  data:
+    neo4j:
+    open-in-view: false
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - beans
+          - health
+          - metrics
+          - env
