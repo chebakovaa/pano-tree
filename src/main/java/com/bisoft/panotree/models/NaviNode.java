@@ -22,6 +22,25 @@ public class NaviNode {
 		return pid;
 	}
 	
+	public void setId(String value) {
+		id = value;
+	}
+	
+	public void setName(String value) {
+		name = value;
+	}
+	
+	public void setMnem(String value) {
+		mnem = value;
+	}
+	
+	public void setPid(String value) {
+		pid = value;
+	}
+
+	public NaviNode() {
+	}
+
 	public NaviNode(String id, String mnem, String name, String pid) {
 		this.id = id;
 		this.mnem = mnem;
