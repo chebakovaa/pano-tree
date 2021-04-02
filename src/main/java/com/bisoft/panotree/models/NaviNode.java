@@ -5,6 +5,7 @@ public class NaviNode {
 	private String name;
 	private String id;
 	private String pid;
+	private String otype;
 	
 	public String getId() {
 		return id;
@@ -41,11 +42,15 @@ public class NaviNode {
 	public NaviNode() {
 	}
 
-	public NaviNode(String id, String mnem, String name, String pid) {
+	public NaviNode(String id, String mnem, String name, String pid, String otype) {
 		this.id = id;
 		this.mnem = mnem;
 		this.name = name;
 		this.pid = pid;
+		this.otype = otype;
 	}
 	
+	public String getOtype() {
+		return otype;
+	}
 }

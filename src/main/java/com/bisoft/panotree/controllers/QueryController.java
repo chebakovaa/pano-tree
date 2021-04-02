@@ -45,7 +45,8 @@ public class QueryController {
 		
 		// Prepare cypher query
 		if(obj.length() == 0) {
-			cypher = "MATCH (c:oilfield) WITH {mnem:labels(c), name:c.name, id: c.uid, pid: ''} as foo RETURN foo";
+			cypher = "MATCH (o) WHERE NOT EXISTS { MATCH (o)-[:CONTAINED_INTO]->(n) } " +
+				"WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: '', otype: 'item', oname: labels(o)[0]} as foo return foo";
 		}else{
 			ObjectMapper mapper = new ObjectMapper();
 			try {
@@ -54,27 +55,37 @@ public class QueryController {
 				e.printStackTrace();
 			}
 			NaviNode node = nodes[nodes.length - 1];
-			params.put ("id", Integer.valueOf(node.getId()));
-			params.put ("names", new String[] {"well","bush","cdng","contour","ns","devobject","stratum"});
-			params.put ("path", node.getMnem());
+			params.put ("id", node.getId());
+			//params.put ("names", new String[] {"well","bush","cdng","contour","ns","devobject","stratum"});
+			params.put ("path", Arrays.stream(nodes)
+				.filter(v -> v.getId().length() > 0)
+				.map(n -> n.getMnem())
+				.toArray());
 			params.put ("pathNames", "name".equals(distinctMode) ? Arrays.stream(nodes)
 				.filter(v -> v.getId().length() > 0)
 				.map(n -> n.getName()).toArray(): new String[0]);
 			params.put ("label", node.getMnem());
-			if (node.getId() == null) {
-				params.put ("id", Integer.valueOf(node.getPid()));
-				cypher = "MATCH (po: {uid:$id})<-[:CONTAINED_INTO]-(o:" + params.get("label") + ") " +
-					"WHERE all(l in labels(o) where not (l = $path)) AND not (o.name in $pathNames)" +
-					"WITH {mnem:labels(o), name:o.name, id: o.uid, pid: $id} as foo " +
+			if (node.getOtype().equals("folder")) {
+				cypher = "MATCH (p)<-[:CONTAINED_INTO {uid: $id}]-(o) " +
+					"WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: $id, otype: o.otype, oname: labels(o)[0]} as foo " +
 					"RETURN foo";
+				
+//				params.put ("id", Integer.valueOf(node.getPid()));
+//				cypher = "MATCH (po: {uid:$id})<-[:CONTAINED_INTO]-(o:" + params.get("label") + ") " +
+//					"WHERE all(l in labels(o) where not (l = $path)) AND not (o.name in $pathNames)" +
+//					"WITH {mnem:labels(o), name:o.name, id: o.uid, pid: $id} as foo " +
+//					"RETURN foo";
 			} else {
-				cypher = String.format("MATCH (root:%1$s {uid:%2$s})<--(n) " +
-					"unwind [l in labels(n) where l in $names AND not (l = $path) | l ] as foo WITH " +
-					"{mnem:[foo], name:foo, id: 0, pid: %2$s} as obj " +
-					"RETURN obj as foo " +
-					"UNION MATCH (root {uid:%2$s})<--(n) WHERE all(l in labels(n) where not (l in $names) AND not (l = $path)) AND not (n.name in $pathNames) " +
-					"WITH {mnem:labels(n), name:n.name, id:n.uid, pid: %2$s} as obj " +
-					"RETURN obj as foo", node.getMnem(), node.getId());
+				cypher = String.format("MATCH (root:%1$s {uid:%2$s})<-[r]-(o) " +
+					"with distinct {id:r.uid, otype:r.otype, oname:r.oname, cnt: count(o)} as foo return foo", node.getMnem(), node.getId());
+
+//				cypher = String.format("MATCH (root:%1$s {uid:%2$s})<--(n) " +
+//					"unwind [l in labels(n) where (l in $names) AND not (l = $path) | l ] as foo WITH " +
+//					"{mnem:[foo], name:foo, id: 0, pid: %2$s} as obj " +
+//					"RETURN obj as foo " +
+//					"UNION MATCH (root {uid:%2$s})<--(n) WHERE all(l in labels(n) where not (l in $names) AND not (l = $path)) AND not (n.name in $pathNames) " +
+//					"WITH {mnem:labels(n), name:n.name, id:n.uid, pid: %2$s} as obj " +
+//					"RETURN obj as foo", node.getMnem(), node.getId());
 			}
 		}
 		
