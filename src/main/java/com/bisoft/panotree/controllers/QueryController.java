@@ -46,7 +46,8 @@ public class QueryController {
 		// Prepare cypher query
 		if(obj.length() == 0) {
 			cypher = "MATCH (o) WHERE NOT EXISTS { MATCH (o)-[:CONTAINED_INTO]->(n) } " +
-				"WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: '', otype: 'item', oname: labels(o)[0]} as foo return foo";
+				"WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: '', otype: 'item', oname: labels(o)[0], cnt: 0} as foo " +
+				"return foo.mnem as mnem, foo.id as id, foo.otype as otype, foo.name as name, foo.cnt as cnt, foo.oname as oname, foo.pid as pid";
 		}else{
 			ObjectMapper mapper = new ObjectMapper();
 			try {
@@ -67,8 +68,8 @@ public class QueryController {
 			params.put ("label", node.getMnem());
 			if (node.getOtype().equals("folder")) {
 				cypher = "MATCH (p)<-[:CONTAINED_INTO {uid: $id}]-(o) " +
-					"WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: $id, otype: o.otype, oname: labels(o)[0]} as foo " +
-					"RETURN foo";
+					"WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: $id, otype: 'item', oname: labels(o)[0], cnt: 0 } as foo " +
+					"RETURN foo.mnem as mnem, foo.id as id, foo.otype as otype, foo.name as name, foo.cnt as cnt, foo.oname as oname, foo.pid as pid";
 				
 //				params.put ("id", Integer.valueOf(node.getPid()));
 //				cypher = "MATCH (po: {uid:$id})<-[:CONTAINED_INTO]-(o:" + params.get("label") + ") " +
@@ -76,8 +77,10 @@ public class QueryController {
 //					"WITH {mnem:labels(o), name:o.name, id: o.uid, pid: $id} as foo " +
 //					"RETURN foo";
 			} else {
-				cypher = String.format("MATCH (root:%1$s {uid:%2$s})<-[r]-(o) " +
-					"with distinct {id:r.uid, otype:r.otype, oname:r.oname, cnt: count(o)} as foo return foo", node.getMnem(), node.getId());
+				cypher = String.format("MATCH (root:%1$s {uid:'%2$s'})<-[r]-(o) " +
+					"with distinct {mnem:r.oname, id:r.uid, otype:'folder', name:r.oname, oname:r.oname, cnt: count(o), pid: root.uid} as foo" +
+					" return foo.mnem as mnem, foo.id as id, foo.otype as otype, foo.name as name, foo.cnt as cnt, foo.oname as oname, foo.pid as pid"
+						, node.getMnem(), node.getId());
 
 //				cypher = String.format("MATCH (root:%1$s {uid:%2$s})<--(n) " +
 //					"unwind [l in labels(n) where (l in $names) AND not (l = $path) | l ] as foo WITH " +
@@ -97,12 +100,14 @@ public class QueryController {
 				tx -> tx.run(finalCypher, params).list()
 			);
 			target = result.stream()
-				.map(v -> v.get("foo").asMap())
+				//.map(v -> v.get("foo").asMap())
 				.map(v -> new NaviNode(
-					v.get("id").toString(),
-					v.get("mnem").toString(),
-					v.get("name").toString(),
-					v.get("pid").toString()
+					v.get("id").asString(),
+					v.get("mnem").asString(),
+					v.get("name").asString(),
+					v.get("pid").asString(),
+					v.get("otype").asString(),
+					v.get("cnt").asInt()
 				))
 			.collect(Collectors.toList());
 		}
@@ -127,8 +132,11 @@ public class QueryController {
 //		}
 		
 		//target.forEach(v -> v.setName() = i18n.containsKey(v.getName()) ? i18n.get(v.getName()) : v.getName());
-		int maxElements = min(target.size()-1, startIndex + countElement);
-		ArrayList<Object> list = new ArrayList(target.subList(startIndex, maxElements));
+		ArrayList<Object> list = new ArrayList<>();
+		if (target.size() > 0) {
+			int maxElements = min(target.size(), startIndex + countElement);
+			list = new ArrayList(target.subList(startIndex, maxElements));
+		}
 		Object res = new PageResponce(list, target.size());
 		return res;
 	}
