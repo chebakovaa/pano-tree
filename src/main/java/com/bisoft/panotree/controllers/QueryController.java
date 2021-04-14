@@ -45,7 +45,7 @@ public class QueryController {
 		
 		// Prepare cypher query
 		if(obj.length() == 0) {
-			cypher = "MATCH (o) WHERE NOT EXISTS { MATCH (o)-[:CONTAINED_INTO]->(n) } " +
+			cypher = "MATCH (o) WHERE NOT EXISTS { MATCH (o)-[]->(n) } and EXISTS { MATCH (o)<-[:CONTAINED_INTO]-(n) }" +
 				"WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: '', otype: 'item', oname: labels(o)[0], cnt: 0} as foo " +
 				"return foo.mnem as mnem, foo.id as id, foo.otype as otype, foo.name as name, foo.cnt as cnt, foo.oname as oname, foo.pid as pid";
 		}else{
