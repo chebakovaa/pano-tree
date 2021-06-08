@@ -1,10 +1,14 @@
 package com.bisoft.panotree.controllers;
 
+import com.bisoft.navi.common.exceptions.LoadResourceException;
+import com.bisoft.navi.common.resources.FilesResource;
+import com.bisoft.navi.common.resources.MapResource;
+import com.bisoft.panotree.interfaces.IOpenedConnection;
+import com.bisoft.panotree.models.DBConnection;
 import com.bisoft.panotree.models.NaviNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.neo4j.driver.Record;
-import org.neo4j.driver.*;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,15 +16,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.lang.Math.min;
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 @RestController
-@RequestMapping()
+@RequestMapping(method=GET)
 public class QueryController {
-	static private final String NEO_URI = "bolt://localhost:7687";
-	static private final String NEO_USERNAME = "neo4j";
-	static private final String NEO_PASSWORD = "admin";
-	Driver driver = GraphDatabase.driver( NEO_URI, AuthTokens.basic( NEO_USERNAME, NEO_PASSWORD ) );
-	
+//	static private final String NEO_URI = "bolt://localhost:7687";
+//	static private final String NEO_USERNAME = "neo4j";
+//	static private final String NEO_PASSWORD = "admin";
+	// Driver driver = GraphDatabase.driver( NEO_URI, AuthTokens.basic( NEO_USERNAME, NEO_PASSWORD ) );
+	DBConnection db = new DBConnection(new MapResource("db.properties").loadedResource());
+  Map<String, String> queries = new FilesResource(new String[]{
+  	"get_top_nodes.cql"
+  }, ".cql").loadedResource();
 	private final Map<String, String> i18n = new HashMap<>();
 	{
 		i18n.put("well", "Скважины");
@@ -33,21 +41,25 @@ public class QueryController {
 		i18n.put("contour", "Контура");
 	}
 	
+	public QueryController() throws LoadResourceException {
+	}
+	
 	@CrossOrigin(origins = "*")
 	@Cacheable
 	@GetMapping("/content")
-	public Object getPath(@RequestParam("object") String obj, @RequestParam("start") int startIndex, @RequestParam("count") int countElement) {
+	public Object getPath(@RequestParam("object") String obj, @RequestParam("start") int startIndex, @RequestParam("count") int countElement) throws Exception {
 		//  Create/load a map to hold the parameter
 		String distinctMode = "label";
 		String cypher = "";
 		Map<String, Object> params = new HashMap<>(5);
-		NaviNode[] nodes = null;
+		NaviNode[] nodes = new NaviNode[0];
 		
 		// Prepare cypher query
 		if(obj.length() == 0) {
-			cypher = "MATCH (o) WHERE NOT EXISTS { MATCH (o)-[:CONTAINED_INTO]->(n) } " +
-				"WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: '', otype: 'item', oname: labels(o)[0], cnt: 0} as foo " +
-				"return foo.mnem as mnem, foo.id as id, foo.otype as otype, foo.name as name, foo.cnt as cnt, foo.oname as oname, foo.pid as pid";
+			cypher =  queries.get("get_top_nodes");
+//			cypher =  "MATCH (o) WHERE NOT EXISTS { MATCH (o)-[:CONTAINED_INTO]->(n) } " +
+//				"WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: '', otype: 'item', oname: labels(o)[0], cnt: 0} as foo " +
+//				"return foo.mnem as mnem, foo.id as id, foo.otype as otype, foo.name as name, foo.cnt as cnt, foo.oname as oname, foo.pid as pid";
 		}else{
 			ObjectMapper mapper = new ObjectMapper();
 			try {
@@ -93,10 +105,10 @@ public class QueryController {
 		}
 		
 		List<NaviNode> target;
-		try ( Session session = driver.session() )
+		try (IOpenedConnection dbConnection = db.openedConnection())
 		{
 			String finalCypher = cypher;
-			List<Record> result = session.readTransaction (
+			List<Record> result = dbConnection.session().readTransaction (
 				tx -> tx.run(finalCypher, params).list()
 			);
 			target = result.stream()
