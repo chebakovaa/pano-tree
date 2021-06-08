@@ -3,12 +3,12 @@ package com.bisoft.panotree.models;
 public class NaviNode {
 	private String mnem;
 	private String name;
-	private String id;
-	private String pid;
+	private Integer id;
+	private Integer pid;
 	private String otype;
 	private Integer cnt;
 
-	public String getId() {
+	public Integer getId() {
 		return id;
 	}
 	
@@ -20,11 +20,11 @@ public class NaviNode {
 		return name;
 	}
 	
-	public String getPid() {
+	public Integer getPid() {
 		return pid;
 	}
 	
-	public void setId(String value) {
+	public void setId(Integer value) {
 		id = value;
 	}
 	
@@ -36,14 +36,14 @@ public class NaviNode {
 		mnem = value;
 	}
 	
-	public void setPid(String value) {
+	public void setPid(Integer value) {
 		pid = value;
 	}
 
 	public NaviNode() {
 	}
 
-	public NaviNode(String id, String mnem, String name, String pid, String otype, Integer cnt) {
+	public NaviNode(Integer id, String mnem, String name, Integer pid, String otype, Integer cnt) {
 		this.id = id;
 		this.mnem = mnem;
 		this.name = name;

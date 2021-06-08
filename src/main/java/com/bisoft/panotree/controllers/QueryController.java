@@ -71,11 +71,11 @@ public class QueryController {
 			params.put ("id", node.getId());
 			//params.put ("names", new String[] {"well","bush","cdng","contour","ns","devobject","stratum"});
 			params.put ("path", Arrays.stream(nodes)
-				.filter(v -> v.getId().length() > 0)
+				.filter(v -> v.getId() > 0)
 				.map(n -> n.getMnem())
 				.toArray());
 			params.put ("pathNames", "name".equals(distinctMode) ? Arrays.stream(nodes)
-				.filter(v -> v.getId().length() > 0)
+				.filter(v -> v.getId() > 0)
 				.map(n -> n.getName()).toArray(): new String[0]);
 			params.put ("label", node.getMnem());
 			if (node.getOtype().equals("folder")) {
@@ -114,10 +114,10 @@ public class QueryController {
 			target = result.stream()
 				//.map(v -> v.get("foo").asMap())
 				.map(v -> new NaviNode(
-					v.get("id").asString(),
+					v.get("id").asInt(),
 					v.get("mnem").asString(),
 					v.get("name").asString(),
-					v.get("pid").asString(),
+					v.get("pid").asInt(),
 					v.get("otype").asString(),
 					v.get("cnt").asInt()
 				))
