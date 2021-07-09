@@ -1,8 +1,33 @@
 <?xml version="1.0"?>
 <query-collection>
     <query id="get_top_nodes">
-        MATCH (o) WHERE NOT EXISTS { MATCH (o)-[:CONTAINED_INTO]->(n) }
-        WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: '', otype: 'item', oname: labels(o)[0], cnt: 0} as foo
-        return foo.mnem as mnem, foo.id as id, foo.otype as otype, foo.name as name, foo.cnt as cnt, foo.oname as oname, foo.pid as pid;
+        MATCH (o) WHERE NOT EXISTS { MATCH (o)-[:CONTAINED_INTO]->(n) } AND EXISTS { MATCH (o)&lt;-[:CONTAINED_INTO]-(n) }
+        WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: -1, otype: 'item', oname: labels(o)[0], cnt: 0} as foo
+        return foo.mnem as mnem, foo.id as id, foo.otype as otype, foo.name as name, foo.cnt as cnt, foo.oname as oname, foo.pid as pid
+        order by foo.name skip $start limit $count;
+    </query>
+    <query id="get_top_nodes_count">
+        MATCH (o) WHERE NOT EXISTS { MATCH (o)-[:CONTAINED_INTO]->(n) } AND EXISTS { MATCH (o)&lt;-[:CONTAINED_INTO]-(n) }
+        return count(o) as count_rows
+    </query>
+    <query id="get_folder_children">
+        MATCH (p)&lt;-[:CONTAINED_INTO {uid: $id}]-(o)
+        WITH {mnem:labels(o)[0], name:o.name, id: o.uid, pid: $id, otype: 'item', oname: labels(o)[0], cnt: 0 } as foo
+        RETURN foo.mnem as mnem, foo.id as id, foo.otype as otype, foo.name as name, foo.cnt as cnt, foo.oname as oname, foo.pid as pid
+        order by foo.name skip $start limit $count;
+    </query>
+    <query id="get_folder_children_count">
+        MATCH (p)&lt;-[:CONTAINED_INTO {uid: $id}]-(o)
+        return count(o) as count_rows
+    </query>
+    <query id="get_node_children">
+        MATCH (root:%1$s {uid:$id})&lt;-[r]-(o)
+        with distinct {mnem:r.oname, id:r.uid, otype:'folder', name:r.oname, oname:r.oname, cnt: count(o), pid: root.uid, count_rows: count(*)} as foo
+        return foo.mnem as mnem, foo.id as id, foo.otype as otype, foo.name as name, foo.cnt as cnt, foo.oname as oname, foo.pid as pid, foo.count_rows as count_rows
+        order by foo.name skip $start limit $count;
+    </query>
+    <query id="get_node_children_count">
+        MATCH (root:%1$s {uid:$id})&lt;-[r]-(o)
+        return count(distinct r) as count_rows;
     </query>
 </query-collection>
