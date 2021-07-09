@@ -6,7 +6,7 @@ public class PageResponce {
 	public Object children;
 	public int total;
 	
-	public PageResponce(ArrayList<Object> body, int count) {
+	public PageResponce(Object body, int count) {
 		children = body;
 		total = count;
 	}
