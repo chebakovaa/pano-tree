@@ -49,7 +49,7 @@ public class QueryController {
 	@CrossOrigin(origins = "*")
 	@Cacheable
 	@GetMapping("/content")
-	public Object getPath(@RequestParam("object") String obj, @RequestParam("start") int startIndex, @RequestParam("count") int countElement) throws Exception {
+	public Object getPath(@RequestParam("node-path") String obj, @RequestParam("start") int startIndex, @RequestParam("count") int countElement) throws Exception {
 		//  Create/load a map to hold the parameter
 		String distinctMode = "label";
 		String cypher = "";
@@ -60,19 +60,20 @@ public class QueryController {
 		NaviNode[] nodes = new NaviNode[0];
 
 		// Prepare cypher query
-		if(obj.length() == 0) {
+		ObjectMapper mapper = new ObjectMapper();
+		try {
+			nodes = mapper.readValue(obj, NaviNode[].class);
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+			throw new ResponseStatusException(
+				HttpStatus.BAD_REQUEST, "object string incorrect", e);
+		}
+		NaviNode node = nodes[nodes.length - 1];
+		
+		if(node.getMnem().equals("root")) {
 			cypher =  queries.get("get_top_nodes");
 			cypher_count =  queries.get("get_top_nodes_count");
 		}else{
-			ObjectMapper mapper = new ObjectMapper();
-			try {
-				nodes = mapper.readValue(obj, NaviNode[].class);
-			} catch (JsonProcessingException e) {
-				e.printStackTrace();
-				throw new ResponseStatusException(
-						HttpStatus.BAD_REQUEST, "object string incorrect", e);
-			}
-			NaviNode node = nodes[nodes.length - 1];
 			params.put ("id", node.getId());
 			//params.put ("names", new String[] {"well","bush","cdng","contour","ns","devobject","stratum"});
 			params.put ("path", Arrays.stream(nodes)
@@ -81,9 +82,6 @@ public class QueryController {
 			params.put ("pathNames", "name".equals(distinctMode) ? Arrays.stream(nodes)
 					.map(n -> n.getName()).toArray(): new String[0]);
 			params.put ("label", node.getMnem());
-
-
-
 			if (node.getOtype().equals("folder")) {
 				cypher = queries.get("get_folder_children");
 				cypher_count = queries.get("get_folder_children_count");
